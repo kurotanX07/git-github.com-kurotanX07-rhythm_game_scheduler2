@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.rhythm_game_scheduler"
+    namespace = "com.kurotanx07.rhythm_game_bot"
     compileSdk = flutter.compileSdkVersion
     
     // NDKバージョン設定
-    ndkVersion = "27.0.12077973"
+    ndkVersion = "26.1.10909125"
 
     compileOptions {
         // Java 11に変更（Kotlinと合わせる）
@@ -25,11 +25,14 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.rhythm_game_scheduler"
+        applicationId = "com.kurotanx07.rhythm_game_bot"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        
+        // マルチDexを有効化
+        multiDexEnabled = true
     }
 
     buildTypes {
@@ -42,6 +45,8 @@ android {
 dependencies {
     // デスガリングツールの更新（バージョンを1.2.2以上に）
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:1.2.2")
+    // マルチDexのサポートを追加
+    implementation("androidx.multidex:multidex:2.0.1")
 }
 
 flutter {

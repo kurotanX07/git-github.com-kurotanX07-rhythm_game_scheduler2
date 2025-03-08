@@ -5,10 +5,10 @@ import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:rhythm_game_scheduler/screens/home_screen.dart';
 import 'package:rhythm_game_scheduler/providers/game_provider.dart';
-import 'package:rhythm_game_scheduler/providers/improved_event_provider.dart'; // 修正
+import 'package:rhythm_game_scheduler/providers/improved_event_provider.dart';
 import 'package:rhythm_game_scheduler/providers/settings_provider.dart';
 import 'package:rhythm_game_scheduler/services/notification_service.dart';
-import 'package:rhythm_game_scheduler/services/improved_ad_service.dart'; // 修正
+import 'package:rhythm_game_scheduler/services/improved_ad_service.dart';
 import 'package:rhythm_game_scheduler/utils/error_handler.dart';
 import 'package:rhythm_game_scheduler/utils/secure_config.dart';
 import 'package:rhythm_game_scheduler/services/firebase_service.dart';
@@ -124,8 +124,15 @@ class MyApp extends StatelessWidget {
     
     return MultiProvider(
       providers: [
+        // GameProviderを最初に初期化
         ChangeNotifierProvider(create: (_) => GameProvider()),
-        ChangeNotifierProvider(create: (_) => EventProvider()), // gameProviderは任意パラメータに変更したので不要
+        // EventProviderはGameProviderに依存するため、ProxyProviderを使用
+        ChangeNotifierProxyProvider<GameProvider, EventProvider>(
+          create: (context) => EventProvider(),
+          update: (context, gameProvider, previousEventProvider) {
+            return previousEventProvider ?? EventProvider(gameProvider: gameProvider);
+          },
+        ),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
       ],
       child: Consumer<SettingsProvider>(

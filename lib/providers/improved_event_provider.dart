@@ -9,8 +9,7 @@ class EventProvider with ChangeNotifier {
   List<Event> _events = [];
   List<String> _selectedGameIds = [];
   
-  // GameProviderを引数として渡すことができるように
-  // ただし、必須ではなく任意のパラメータに変更
+  // GameProviderを参照
   final GameProvider? gameProvider;
   
   // ローディング状態を細分化
@@ -26,13 +25,47 @@ class EventProvider with ChangeNotifier {
   // フィーチャーイベント管理
   List<Event> _featuredEvents = [];
 
-  // コンストラクタでgameProviderを任意パラメータに変更
+  // コンストラクタ
   EventProvider({this.gameProvider}) {
-    // 初期化時にFirestoreからデータを読み込む
-    fetchEvents();
+    _initialize();
+  }
+
+  // 初期化処理
+  void _initialize() {
+    // GameProviderが指定されている場合、そのリスナーを設定
+    if (gameProvider != null) {
+      // 初期状態でGameProviderのゲーム選択を取得
+      _updateSelectedGamesFromGameProvider();
+      
+      // GameProviderの変更を監視
+      gameProvider!.addListener(_updateSelectedGamesFromGameProvider);
+    }
     
-    // フィーチャーイベントも取得
+    // データの初期ロード
+    fetchEvents();
     fetchFeaturedEvents();
+  }
+  
+  // GameProviderの選択状態に基づいて選択ゲームIDを更新
+  void _updateSelectedGamesFromGameProvider() {
+    if (gameProvider == null) return;
+    
+    if (gameProvider!.favoritesAsFilter) {
+      // お気に入りモードが有効なら、お気に入りIDをフィルターに設定
+      setSelectedGameIds(gameProvider!.favoriteGames.map((game) => game.id).toList());
+    } else {
+      // 通常モードなら、選択されたゲームIDをフィルターに設定
+      setSelectedGameIds(gameProvider!.selectedGames.map((game) => game.id).toList());
+    }
+  }
+  
+  @override
+  void dispose() {
+    // リスナーの解除
+    if (gameProvider != null) {
+      gameProvider!.removeListener(_updateSelectedGamesFromGameProvider);
+    }
+    super.dispose();
   }
 
   // ゲッター

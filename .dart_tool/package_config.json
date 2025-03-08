@@ -674,10 +674,10 @@
       "languageVersion": "3.7"
     }
   ],
-  "generated": "2025-03-08T11:03:05.499734Z",
+  "generated": "2025-03-08T16:18:37.960981Z",
   "generator": "pub",
   "generatorVersion": "3.7.0",
   "flutterRoot": "file:///C:/flutter",
-  "flutterVersion": "3.29.0",
+  "flutterVersion": "3.29.1",
   "pubCache": "file:///C:/Users/kurot/AppData/Local/Pub/Cache"
 }

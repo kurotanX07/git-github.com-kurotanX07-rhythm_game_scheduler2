@@ -2,15 +2,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:rhythm_game_scheduler/models/event.dart';
-import 'package:rhythm_game_scheduler/providers/event_provider.dart';
+import 'package:rhythm_game_scheduler/providers/improved_event_provider.dart';
 import 'package:rhythm_game_scheduler/providers/game_provider.dart';
 import 'package:rhythm_game_scheduler/screens/calendar_screen.dart';
 import 'package:rhythm_game_scheduler/screens/settings_screen.dart';
-import 'package:rhythm_game_scheduler/services/ad_service.dart';
+import 'package:rhythm_game_scheduler/services/improved_ad_service.dart';
 import 'package:rhythm_game_scheduler/widgets/event_list.dart';
 import 'package:rhythm_game_scheduler/widgets/featured_event_card.dart';
 import 'package:rhythm_game_scheduler/widgets/game_filter.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:rhythm_game_scheduler/utils/error_handler.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -24,27 +25,58 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<String> _tabTitles = ['イベント一覧', 'カレンダー', '設定'];
   final TextEditingController _searchController = TextEditingController();
   final AdService _adService = AdService();
+  
+  // ネットワークエラー状態
+  bool _hasNetworkError = false;
 
   @override
   void initState() {
     super.initState();
     
-    // ゲームフィルターが変更されたときに、イベントフィルターを更新
-    Future.microtask(() {
-      final gameProvider = context.read<GameProvider>();
-      final eventProvider = context.read<EventProvider>();
-      
-      // 最初はすべてのゲームを選択
-      gameProvider.selectAll();
-      
-      // イベントフィルター更新
-      eventProvider.setSelectedGameIds(
-        gameProvider.selectedGames.map((game) => game.id).toList()
-      );
-    });
+    // 広告サービスの初期化確認
+    if (!_adService.isInitialized) {
+      _initializeAdService();
+    } else {
+      // インタースティシャル広告をあらかじめロードしておく
+      _adService.loadInterstitialAd();
+    }
     
-    // インタースティシャル広告をあらかじめロードしておく
-    _adService.loadInterstitialAd();
+    // 接続状態のチェック
+    _checkConnectivity();
+  }
+  
+  Future<void> _initializeAdService() async {
+    try {
+      await _adService.initialize();
+      // インタースティシャル広告をあらかじめロードしておく
+      _adService.loadInterstitialAd();
+    } catch (e, stack) {
+      debugPrint('Failed to initialize ad service: $e');
+      AppErrorHandler().reportError(e, stack);
+    }
+  }
+  
+  Future<void> _checkConnectivity() async {
+    try {
+      final isNetworkAvailable = await AppErrorHandler().isNetworkAvailable();
+      setState(() {
+        _hasNetworkError = !isNetworkAvailable;
+      });
+      
+      if (!isNetworkAvailable) {
+        // UI上でネットワークエラーを表示
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('ネットワーク接続がありません。オフラインモードで動作します。'),
+              duration: Duration(seconds: 5),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error checking connectivity: $e');
+    }
   }
 
   @override
@@ -55,73 +87,75 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final eventProvider = Provider.of<EventProvider>(context);
-
     return Scaffold(
       appBar: AppBar(
-        title: eventProvider.isSearching
-            ? TextField(
-                controller: _searchController,
-                autofocus: true,
-                decoration: const InputDecoration(
-                  hintText: 'イベントを検索...',
-                  border: InputBorder.none,
-                ),
-                style: const TextStyle(color: Colors.white),
-                onChanged: (value) {
-                  eventProvider.updateSearchQuery(value);
-                },
-              )
-            : Text(_tabTitles[_selectedIndex]),
-        actions: [
-          // 検索ボタン
-          IconButton(
-            icon: Icon(eventProvider.isSearching ? Icons.close : Icons.search),
-            onPressed: () {
-              eventProvider.toggleSearch();
-              if (!eventProvider.isSearching) {
-                _searchController.clear();
-              }
-            },
-          ),
-          // 更新ボタン
-          if (_selectedIndex == 0 && !eventProvider.isSearching)
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('データを更新中...'))
-                );
-                
-                // ゲームとイベントのデータを更新
-                context.read<GameProvider>().fetchGames();
-                eventProvider.fetchEvents();
-                eventProvider.fetchFeaturedEvents();
-                
-                // データ更新時にインタースティシャル広告を表示（確率で表示）
-                if (DateTime.now().millisecond % 10 < 3) { // 約30%の確率
-                  _adService.showInterstitialAd();
-                }
-              },
-              tooltip: 'データを更新',
-            ),
-        ],
+        title: Consumer<EventProvider>(
+          builder: (context, eventProvider, _) {
+            return eventProvider.isSearching
+                ? TextField(
+                    controller: _searchController,
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      hintText: 'イベントを検索...',
+                      border: InputBorder.none,
+                    ),
+                    style: const TextStyle(color: Colors.white),
+                    onChanged: (value) {
+                      eventProvider.updateSearchQuery(value);
+                    },
+                  )
+                : Text(_tabTitles[_selectedIndex]);
+          },
+        ),
+        actions: _buildAppBarActions(),
       ),
       body: Column(
         children: [
+          // ネットワークエラー表示
+          if (_hasNetworkError)
+            Container(
+              width: double.infinity,
+              color: Colors.orange,
+              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+              child: const Row(
+                children: [
+                  Icon(Icons.wifi_off, color: Colors.white, size: 16),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'オフラインモードで表示中。最新データを取得するには、ネットワーク接続を確認してください。',
+                      style: TextStyle(color: Colors.white, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          
           // メインコンテンツ
           Expanded(
             child: _buildBody(),
           ),
           
           // バナー広告を表示
-          if (_adService.isBannerAdLoaded && _adService.bannerAd != null)
-            Container(
-              alignment: Alignment.center,
-              width: _adService.bannerAd!.size.width.toDouble(),
-              height: _adService.bannerAd!.size.height.toDouble(),
-              child: AdWidget(ad: _adService.bannerAd!),
-            ),
+          Consumer<EventProvider>(
+            builder: (context, eventProvider, _) {
+              // 検索中は広告を表示しない
+              if (eventProvider.isSearching) {
+                return const SizedBox.shrink();
+              }
+              
+              if (_adService.isBannerAdLoaded && _adService.bannerAd != null) {
+                return Container(
+                  alignment: Alignment.center,
+                  width: _adService.bannerAd!.size.width.toDouble(),
+                  height: _adService.bannerAd!.size.height.toDouble(),
+                  child: AdWidget(ad: _adService.bannerAd!),
+                );
+              }
+              
+              return const SizedBox.shrink();
+            },
+          ),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -145,17 +179,128 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  List<Widget> _buildAppBarActions() {
+    return [
+      // 検索ボタン
+      Consumer<EventProvider>(
+        builder: (context, eventProvider, _) {
+          return IconButton(
+            icon: Icon(eventProvider.isSearching ? Icons.close : Icons.search),
+            onPressed: () {
+              eventProvider.toggleSearch();
+              if (!eventProvider.isSearching) {
+                _searchController.clear();
+              }
+            },
+          );
+        },
+      ),
+      // 更新ボタン（検索中以外とイベント一覧タブのみ表示）
+      Consumer<EventProvider>(
+        builder: (context, eventProvider, _) {
+          if (_selectedIndex == 0 && !eventProvider.isSearching) {
+            return IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: () => _refreshData(eventProvider),
+              tooltip: 'データを更新',
+            );
+          }
+          return const SizedBox.shrink();
+        },
+      ),
+    ];
+  }
+
+  Future<void> _refreshData(EventProvider eventProvider) async {
+    // ネットワーク接続を確認
+    final isConnected = await AppErrorHandler().isNetworkAvailable();
+    
+    if (!isConnected) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('ネットワーク接続がありません。接続を確認して再試行してください。'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+      setState(() {
+        _hasNetworkError = true;
+      });
+      return;
+    }
+    
+    setState(() {
+      _hasNetworkError = false;
+    });
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('データを更新中...'))
+      );
+    }
+    
+    try {
+      // ゲームとイベントのデータを更新
+      await context.read<GameProvider>().fetchGames();
+      await eventProvider.refreshAllData();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('データを更新しました'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+      
+      // データ更新時にインタースティシャル広告を表示（確率で表示）
+      if (DateTime.now().millisecond % 10 < 3) { // 約30%の確率
+        _adService.showInterstitialAd();
+      }
+    } catch (e, stack) {
+      debugPrint('Error refreshing data: $e');
+      AppErrorHandler().reportError(e, stack);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('データの更新中にエラーが発生しました'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
+      
+      // 検索モードを解除（タブ切り替え時）
+      if (context.read<EventProvider>().isSearching) {
+        context.read<EventProvider>().toggleSearch();
+        _searchController.clear();
+      }
     });
   }
 
   Widget _buildBody() {
-    final eventProvider = Provider.of<EventProvider>(context);
-    
     switch (_selectedIndex) {
       case 0:
+        return _buildEventsTab();
+      case 1:
+        return const CalendarScreen();
+      case 2:
+        return const SettingsScreen();
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  Widget _buildEventsTab() {
+    return Consumer<EventProvider>(
+      builder: (context, eventProvider, _) {
         if (eventProvider.isSearching && eventProvider.searchQuery.isNotEmpty) {
           // 検索結果を表示
           return Column(
@@ -177,38 +322,28 @@ class _HomeScreenState extends State<HomeScreen> {
           return Column(
             children: [
               // フィーチャーイベントセクション
-              _buildFeaturedEventsSection(),
+              _buildFeaturedEventsSection(eventProvider),
               
+              // ゲームフィルター
               const GameFilter(),
               
+              // イベントリスト
               Expanded(
-                child: Consumer<EventProvider>(
-                  builder: (context, eventProvider, child) {
-                    return RefreshIndicator(
-                      onRefresh: () async {
-                        await eventProvider.fetchEvents();
-                      },
-                      child: EventList(events: eventProvider.filteredEvents),
-                    );
-                  },
+                child: RefreshIndicator(
+                  onRefresh: () => eventProvider.fetchEvents(isRefresh: true),
+                  child: EventList(events: eventProvider.filteredEvents),
                 ),
               ),
             ],
           );
         }
-      case 1:
-        return const CalendarScreen();
-      case 2:
-        return const SettingsScreen();
-      default:
-        return const SizedBox.shrink();
-    }
+      },
+    );
   }
 
   // フィーチャーイベントセクションの構築
-  Widget _buildFeaturedEventsSection() {
-    final eventProvider = Provider.of<EventProvider>(context);
-    final gameProvider = Provider.of<GameProvider>(context);
+  Widget _buildFeaturedEventsSection(EventProvider eventProvider) {
+    final gameProvider = context.read<GameProvider>();
     
     // お気に入りに登録したゲームのイベントだけをフィルタリング
     final favoriteGameIds = gameProvider.favoriteGames.map((game) => game.id).toList();
@@ -216,7 +351,7 @@ class _HomeScreenState extends State<HomeScreen> {
         .where((event) => favoriteGameIds.contains(event.gameId))
         .toList();
     
-    // お気に入りゲームがない場合やロード中は表示しない
+    // お気に入りゲームがない場合や、フィーチャーイベントがない場合はセクションを非表示
     if ((favoriteGameIds.isEmpty || favoriteEvents.isEmpty) && !eventProvider.isFeaturedLoading) {
       return const SizedBox.shrink();
     }
@@ -247,14 +382,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.favorite_border, color: Colors.grey),
-                            SizedBox(height: 8),
-                            Text(
+                            const Icon(Icons.favorite_border, color: Colors.grey),
+                            const SizedBox(height: 8),
+                            const Text(
                               'お気に入りゲームのイベントがありません',
                               style: TextStyle(color: Colors.grey),
                             ),
-                            SizedBox(height: 4),
-                            Text(
+                            const SizedBox(height: 4),
+                            const Text(
                               '設定からゲームをお気に入り登録してください',
                               style: TextStyle(
                                 color: Colors.grey, 

@@ -6,6 +6,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+// グローバルキーを使用するためのインポート
+import 'package:rhythm_game_scheduler/main.dart';
+
 class AppErrorHandler {
   // シングルトンパターン
   static final AppErrorHandler _instance = AppErrorHandler._internal();
@@ -18,8 +21,13 @@ class AppErrorHandler {
   // エラー発生時のコールバック（UI通知用）
   Function(String message)? onError;
   
+  // UI通知を有効にするかどうか
+  bool _enableUINotifications = true;
+  
   // アプリケーションの初期化時に呼び出す
-  void initialize() {
+  void initialize({bool enableUINotifications = true}) {
+    _enableUINotifications = enableUINotifications;
+    
     // グローバルエラーハンドリングの設定
     FlutterError.onError = (FlutterErrorDetails details) {
       reportError(details.exception, details.stack);
@@ -37,8 +45,7 @@ class AppErrorHandler {
   }
   
   // エラーをログに記録し、必要に応じて通知
-  // publicメソッドに変更
-  void reportError(dynamic error, StackTrace? stackTrace) {
+  void reportError(dynamic error, StackTrace? stackTrace, {bool? showUI}) {
     final errorMessage = _formatErrorMessage(error);
     final stackTraceStr = stackTrace?.toString() ?? 'No stack trace available';
     
@@ -53,8 +60,53 @@ class AppErrorHandler {
     // エラーログを保存
     _saveErrorLog(errorMessage, stackTraceStr);
     
+    // UI通知が明示的に無効化されていたら通知しない
+    final shouldShowUI = showUI ?? _enableUINotifications;
+    if (!shouldShowUI) {
+      debugPrint('UI notification suppressed for error: $errorMessage');
+      return;
+    }
+    
     // UIに通知（設定されている場合）
-    onError?.call(_getUserFriendlyMessage(error));
+    final message = _getUserFriendlyMessage(error);
+    
+    // コールバックが設定されている場合は使用
+    if (onError != null) {
+      onError?.call(message);
+    } else {
+      // 安全な方法でスナックバーを表示（アプリが初期化済みの場合のみ）
+      _tryShowErrorSnackBar(message);
+    }
+  }
+  
+  // スナックバーを安全に表示を試みる
+  void _tryShowErrorSnackBar(String message) {
+    try {
+      // ScaffoldMessengerKeyが利用可能か確認
+      if (scaffoldMessengerKey.currentState != null && 
+          scaffoldMessengerKey.currentContext != null) {
+        // UI更新を次のフレームに遅延して安全に実行
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (scaffoldMessengerKey.currentState != null) {
+            scaffoldMessengerKey.currentState!.clearSnackBars();
+            scaffoldMessengerKey.currentState!.showSnackBar(
+              SnackBar(
+                content: Text(message),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        });
+      } else {
+        // 初期化されていない場合はログにのみ記録
+        debugPrint('Error notification (no UI available): $message');
+      }
+    } catch (e) {
+      // スナックバー表示中にエラーが発生しても、アプリがクラッシュしないようにする
+      debugPrint('Failed to show error snackbar: $e');
+      debugPrint('Original error message: $message');
+    }
   }
   
   // ユーザー向けのエラーメッセージを取得
@@ -136,21 +188,51 @@ class AppErrorHandler {
 // エラー表示用のスナックバー
 class ErrorSnackBar {
   static void show(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 4),
-        action: SnackBarAction(
-          label: '閉じる',
-          textColor: Colors.white,
-          onPressed: () {
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          },
-        ),
-      ),
-    );
+    try {
+      // まずUI更新を次のフレームに遅延
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        try {
+          // グローバルキーを使用した表示を試みる
+          if (scaffoldMessengerKey.currentState != null) {
+            scaffoldMessengerKey.currentState!.clearSnackBars();
+            scaffoldMessengerKey.currentState!.showSnackBar(
+              SnackBar(
+                content: Text(message),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+            return;
+          }
+          
+          // コンテキストからScaffoldMessengerを安全に取得
+          final messenger = ScaffoldMessenger.maybeOf(context);
+          if (messenger != null) {
+            messenger.clearSnackBars();
+            messenger.showSnackBar(
+              SnackBar(
+                content: Text(message),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+            return;
+          }
+          
+          // どちらの方法も失敗した場合はログに記録
+          debugPrint('Failed to show snackbar: No valid ScaffoldMessenger');
+          debugPrint('Error message: $message');
+        } catch (e) {
+          // エラー発生時にはログに記録
+          debugPrint('Error showing snackbar: $e');
+          debugPrint('Error message: $message');
+        }
+      });
+    } catch (e) {
+      // addPostFrameCallbackでエラーが発生した場合
+      debugPrint('Critical error in ErrorSnackBar.show: $e');
+      debugPrint('Error message: $message');
+    }
   }
 }
 
