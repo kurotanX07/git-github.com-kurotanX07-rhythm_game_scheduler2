@@ -1,0 +1,16 @@
+{
+    "app_name": "リズムゲームスケジューラー",
+    "app_version": "1.0.0",
+    "debug_mode": false,
+    "cache_ttl_minutes": 60,
+    "ads_enabled": true,
+    "refresh_interval_minutes": 15,
+    "max_events_per_page": 20,
+    "featured_events_count": 5,
+    "firebase_project_id": "rhythm-game-bot",
+    "firebase_messaging_sender_id": "801753812238",
+    "firebase_web_app_id": "1:801753812238:web:9e434bd7afe8953eb79b5f",
+    "firebase_android_app_id": "1:801753812238:android:16bafb09152f2621b79b5f",
+    "firebase_storage_bucket": "rhythm-game-bot.firebasestorage.app",
+    "firebase_auth_domain": "rhythm-game-bot.firebaseapp.com"
+  }

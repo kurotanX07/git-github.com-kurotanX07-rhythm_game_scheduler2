@@ -53,21 +53,6 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  // タブ切り替え時の処理
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-    
-    // タブ切り替え時にインタースティシャル広告を表示（確率で表示）
-    if (index == 1 || index == 2) { // カレンダーや設定に移動したとき
-      // 一定確率（約30%）で広告を表示
-      if (DateTime.now().millisecond % 10 < 3) {
-        _adService.showInterstitialAd();
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final eventProvider = Provider.of<EventProvider>(context);
@@ -160,6 +145,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
   Widget _buildBody() {
     final eventProvider = Provider.of<EventProvider>(context);
     
@@ -217,10 +208,16 @@ class _HomeScreenState extends State<HomeScreen> {
   // フィーチャーイベントセクションの構築
   Widget _buildFeaturedEventsSection() {
     final eventProvider = Provider.of<EventProvider>(context);
-    final featuredEvents = eventProvider.featuredEvents;
+    final gameProvider = Provider.of<GameProvider>(context);
     
-    // フィーチャーイベントがない場合は表示しない
-    if (featuredEvents.isEmpty && !eventProvider.isFeaturedLoading) {
+    // お気に入りに登録したゲームのイベントだけをフィルタリング
+    final favoriteGameIds = gameProvider.favoriteGames.map((game) => game.id).toList();
+    final favoriteEvents = eventProvider.featuredEvents
+        .where((event) => favoriteGameIds.contains(event.gameId))
+        .toList();
+    
+    // お気に入りゲームがない場合やロード中は表示しない
+    if ((favoriteGameIds.isEmpty || favoriteEvents.isEmpty) && !eventProvider.isFeaturedLoading) {
       return const SizedBox.shrink();
     }
     
@@ -232,7 +229,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
             child: Text(
-              '注目のイベント',
+              'お気に入りゲームのイベント',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -245,14 +242,36 @@ class _HomeScreenState extends State<HomeScreen> {
             height: 180,
             child: eventProvider.isFeaturedLoading
                 ? const Center(child: CircularProgressIndicator())
-                : ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: featuredEvents.length,
-                    itemBuilder: (context, index) {
-                      final event = featuredEvents[index];
-                      return FeaturedEventCard(event: event);
-                    },
-                  ),
+                : favoriteEvents.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.favorite_border, color: Colors.grey),
+                            SizedBox(height: 8),
+                            Text(
+                              'お気に入りゲームのイベントがありません',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              '設定からゲームをお気に入り登録してください',
+                              style: TextStyle(
+                                color: Colors.grey, 
+                                fontSize: 12
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: favoriteEvents.length,
+                        itemBuilder: (context, index) {
+                          final event = favoriteEvents[index];
+                          return FeaturedEventCard(event: event);
+                        },
+                      ),
           ),
           
           const Divider(

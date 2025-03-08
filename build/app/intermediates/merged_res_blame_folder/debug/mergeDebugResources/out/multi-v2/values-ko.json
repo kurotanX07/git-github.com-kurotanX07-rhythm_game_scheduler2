@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.example.rhythm_game_scheduler.app-mergeDebugResources-53:/values-ko/values-ko.xml",
+            "outputFile": "com.example.rhythm_game_scheduler.app-mergeDebugResources-54:/values-ko/values-ko.xml",
             "map": [
                 {
                     "source": "C:\\Users\\kurot\\.gradle\\caches\\8.10.2\\transforms\\308a2e77faa557d0bd706972416bde6a\\transformed\\browser-1.8.0\\res\\values-ko\\values-ko.xml",

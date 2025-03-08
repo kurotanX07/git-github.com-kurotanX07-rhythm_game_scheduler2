@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:rhythm_game_scheduler/providers/settings_provider.dart';
+import 'package:rhythm_game_scheduler/providers/game_provider.dart';
 import 'package:rhythm_game_scheduler/services/ad_service.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // 追加
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:rhythm_game_scheduler/screens/game_list_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -33,10 +35,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Consumer<SettingsProvider>(
-        builder: (context, settingsProvider, child) {
+      body: Consumer2<SettingsProvider, GameProvider>(
+        builder: (context, settingsProvider, gameProvider, child) {
           return ListView(
             children: [
+              _buildSectionHeader('ゲーム設定'),
+              
+              // ゲーム一覧へのリンク
+              ListTile(
+                leading: const Icon(Icons.gamepad),
+                title: const Text('ゲーム一覧'),
+                subtitle: const Text('ゲーム情報の閲覧とお気に入り設定'),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 18),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const GameListScreen(),
+                    ),
+                  );
+                },
+              ),
+              
+              // お気に入りをフィルターとして使用
+              SwitchListTile(
+                title: const Text('お気に入りをフィルターとして使用'),
+                subtitle: const Text('お気に入りに追加したゲームのイベントだけを表示します'),
+                value: gameProvider.favoritesAsFilter,
+                onChanged: (value) {
+                  gameProvider.toggleFavoritesAsFilter();
+                },
+              ),
+              
+              const Divider(),
+              
               _buildSectionHeader('表示設定'),
               
               // ダークモード設定
@@ -181,7 +213,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               
               ListTile(
                 title: const Text('開発者'),
-                subtitle: const Text('あなたの名前'),
+                subtitle: const Text('リズムゲームスケジューラーチーム'),
               ),
             ],
           );

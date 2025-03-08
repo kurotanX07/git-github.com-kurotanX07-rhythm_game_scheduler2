@@ -13,15 +13,7 @@ class EventCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final gameProvider = context.read<GameProvider>();
-    final game = gameProvider.games.firstWhere(
-      (g) => g.id == event.gameId,
-      orElse: () => Game(
-        id: 'unknown',
-        name: '不明なゲーム',
-        imageUrl: '',
-        developer: '',
-      ),
-    );
+    final game = gameProvider.getGameById(event.gameId);
 
     // イベントステータスに基づいてカードの色を決定
     Color statusColor;
@@ -56,11 +48,23 @@ class EventCard extends StatelessWidget {
             children: [
               Row(
                 children: [
+                  // ゲームアイコン
                   CircleAvatar(
+                    radius: 24,
+                    backgroundColor: Colors.grey[200],
                     backgroundImage: game.imageUrl.isNotEmpty
                         ? NetworkImage(game.imageUrl)
                         : null,
-                    child: game.imageUrl.isEmpty ? Text(game.name[0]) : null,
+                    child: game.imageUrl.isEmpty
+                        ? Text(
+                            game.name.isNotEmpty ? game.name[0] : '?',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey[800],
+                            ),
+                          )
+                        : null,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -111,6 +115,16 @@ class EventCard extends StatelessWidget {
                     height: 150,
                     width: double.infinity,
                     fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        height: 150,
+                        width: double.infinity,
+                        color: Colors.grey[300],
+                        child: Center(
+                          child: Icon(Icons.image_not_supported, color: Colors.grey[600]),
+                        ),
+                      );
+                    },
                   ),
                 ),
               const SizedBox(height: 8),

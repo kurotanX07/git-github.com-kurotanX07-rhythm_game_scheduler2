@@ -5,7 +5,6 @@ import 'package:rhythm_game_scheduler/models/game.dart';
 import 'package:rhythm_game_scheduler/providers/event_provider.dart';
 import 'package:rhythm_game_scheduler/providers/game_provider.dart';
 import 'package:rhythm_game_scheduler/screens/event_detail_screen.dart';
-import 'package:rhythm_game_scheduler/widgets/game_filter.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 
@@ -33,8 +32,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return Scaffold(
       body: Column(
         children: [
-          // ゲームフィルター
-          const GameFilter(),
+          // ゲームフィルターは表示しない（設定画面に移動）
           
           // カレンダー
           Consumer<EventProvider>(

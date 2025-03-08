@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.example.rhythm_game_scheduler.app-mergeDebugResources-53:/values-ro/values-ro.xml",
+            "outputFile": "com.example.rhythm_game_scheduler.app-mergeDebugResources-54:/values-ro/values-ro.xml",
             "map": [
                 {
                     "source": "C:\\Users\\kurot\\.gradle\\caches\\8.10.2\\transforms\\96770765c685e2e0c1ab8d9009285ff6\\transformed\\jetified-play-services-ads-23.6.0\\res\\values-ro\\values.xml",

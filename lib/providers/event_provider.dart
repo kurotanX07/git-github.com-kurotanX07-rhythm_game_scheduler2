@@ -1,10 +1,13 @@
 // lib/providers/event_provider.dart
 import 'package:flutter/foundation.dart';
 import 'package:rhythm_game_scheduler/models/event.dart';
+import 'package:rhythm_game_scheduler/providers/game_provider.dart';
 import 'package:rhythm_game_scheduler/services/firestore_service.dart';
 
 class EventProvider with ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService();
+  final GameProvider gameProvider;
+  
   List<Event> _events = [];
   List<String> _selectedGameIds = [];
   bool _isLoading = false;
@@ -13,13 +16,38 @@ class EventProvider with ChangeNotifier {
   // フィーチャーイベント管理
   List<Event> _featuredEvents = [];
   bool _isFeaturedLoading = false;
+  
+  // お気に入りイベント表示フラグ
+  bool _onlyShowFavoriteEvents = false;
 
-  EventProvider() {
-    // 初期化時にFirestoreからデータを読み込む
+  // コンストラクタでGameProviderを受け取る
+  EventProvider({required this.gameProvider}) {
+    // 初期化時にFirestoreからデータを読み込んでおく
     fetchEvents();
     
     // フィーチャーイベントも取得
     fetchFeaturedEvents();
+    
+    // GameProviderの変更を監視して、必要に応じてフィルターを更新
+    gameProvider.addListener(_updateFiltersFromGameProvider);
+  }
+  
+  // GameProviderの変更を監視し、フィルター設定を更新するメソッド
+  void _updateFiltersFromGameProvider() {
+    if (gameProvider.favoritesAsFilter) {
+      // お気に入りモードが有効なら、お気に入りIDをフィルターに設定
+      setSelectedGameIds(gameProvider.favoriteGames.map((game) => game.id).toList());
+    } else {
+      // 通常モードなら、選択されたゲームIDをフィルターに設定
+      setSelectedGameIds(gameProvider.selectedGames.map((game) => game.id).toList());
+    }
+  }
+  
+  @override
+  void dispose() {
+    // リスナーの解除
+    gameProvider.removeListener(_updateFiltersFromGameProvider);
+    super.dispose();
   }
 
   List<Event> get events => List.unmodifiable(_events);
@@ -27,6 +55,7 @@ class EventProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isFeaturedLoading => _isFeaturedLoading;
   String? get error => _error;
+  bool get onlyShowFavoriteEvents => _onlyShowFavoriteEvents;
   
   List<Event> get filteredEvents {
     if (_selectedGameIds.isEmpty) {
@@ -34,13 +63,19 @@ class EventProvider with ChangeNotifier {
     }
     return _events.where((event) => _selectedGameIds.contains(event.gameId)).toList();
   }
+  
+  // お気に入り表示モードを切り替える
+  void toggleFavoriteEventsOnly() {
+    _onlyShowFavoriteEvents = !_onlyShowFavoriteEvents;
+    notifyListeners();
+  }
 
   void setSelectedGameIds(List<String> gameIds) {
     _selectedGameIds = gameIds;
     notifyListeners();
   }
 
-  // Firestoreからイベントデータを取得する（サンプルデータを使わないバージョン）
+  // Firestoreからイベントデータを取得する
   Future<void> fetchEvents() async {
     _isLoading = true;
     _error = null;
@@ -49,8 +84,14 @@ class EventProvider with ChangeNotifier {
     try {
       final events = await _firestoreService.getEvents();
       
-      _events = events; // 空の場合も含めてFirestoreのデータを使用
-      debugPrint('Loaded ${events.length} events from Firestore');
+      if (events.isNotEmpty) {
+        _events = events;
+        debugPrint('Loaded ${events.length} events from Firestore');
+      } else {
+        debugPrint('No events in Firestore, loading sample data');
+        // Firestoreにデータがなければサンプルデータを読み込む
+        loadSampleEvents();
+      }
       
       _isLoading = false;
       notifyListeners();
@@ -58,8 +99,8 @@ class EventProvider with ChangeNotifier {
       debugPrint('Error fetching Firestore events: $e');
       _error = 'データの取得に失敗しました';
       
-      // エラー時は空のリストをセット（サンプルデータを使わない）
-      _events = [];
+      // エラー時もサンプルデータを読み込む
+      loadSampleEvents();
       
       _isLoading = false;
       notifyListeners();
@@ -77,7 +118,6 @@ class EventProvider with ChangeNotifier {
       debugPrint('Loaded ${events.length} featured events');
     } catch (e) {
       debugPrint('Error fetching featured events: $e');
-      _featuredEvents = []; // エラー時は空リスト
     } finally {
       _isFeaturedLoading = false;
       notifyListeners();
@@ -92,6 +132,66 @@ class EventProvider with ChangeNotifier {
       debugPrint('Error fetching events for game $gameId: $e');
       return [];
     }
+  }
+
+  // ローカルのサンプルデータを読み込む
+  void loadSampleEvents() {
+    final now = DateTime.now();
+    
+    _events = [
+      Event(
+        id: '1',
+        gameId: 'proseka',
+        title: 'Next Frontier!イベント',
+        description: 'ランキング形式のイベントです。「Next Frontier!」をテーマにしたカードが手に入ります。',
+        startDate: now.subtract(const Duration(days: 2)),
+        endDate: now.add(const Duration(days: 5)),
+        type: EventType.ranking,
+        imageUrl: 'https://via.placeholder.com/120x80',
+      ),
+      Event(
+        id: '2',
+        gameId: 'bandori',
+        title: 'ロゼリア 新曲発表会イベント',
+        description: 'ロゼリアの新曲「PASSION」をフィーチャーしたイベントです。',
+        startDate: now.add(const Duration(days: 3)),
+        endDate: now.add(const Duration(days: 10)),
+        type: EventType.ranking,
+        imageUrl: 'https://via.placeholder.com/120x80',
+      ),
+      Event(
+        id: '3',
+        gameId: 'yumeste',
+        title: '夏休み特別キャンペーン',
+        description: '期間限定で夏をテーマにしたカードがピックアップされたガチャが登場します。',
+        startDate: now.add(const Duration(days: 1)),
+        endDate: now.add(const Duration(days: 14)),
+        type: EventType.gacha,
+        imageUrl: 'https://via.placeholder.com/120x80',
+      ),
+      Event(
+        id: '4',
+        gameId: 'deresute',
+        title: 'LIVE Parade イベント',
+        description: 'アイドルの総力戦イベント。チームを編成して上位報酬を目指しましょう。',
+        startDate: now.subtract(const Duration(days: 3)),
+        endDate: now.add(const Duration(days: 3)),
+        type: EventType.ranking,
+        imageUrl: 'https://via.placeholder.com/120x80',
+      ),
+      Event(
+        id: '5',
+        gameId: 'mirishita',
+        title: '765プロ THANKS フェスティバル',
+        description: '765プロダクション全体のライブフェスティバル。レアカードをゲットするチャンス！',
+        startDate: now.add(const Duration(days: 7)),
+        endDate: now.add(const Duration(days: 14)),
+        type: EventType.live,
+        imageUrl: 'https://via.placeholder.com/120x80',
+      ),
+    ];
+    
+    notifyListeners();
   }
 
   // 検索関連の変数

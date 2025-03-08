@@ -82,26 +82,51 @@ class FeaturedEventCard extends StatelessWidget {
                           ),
                         ),
                   
-                  // ゲーム名をオーバーレイ表示
+                  // ゲーム名とアイコンをオーバーレイ表示
                   Positioned(
                     top: 0,
                     left: 0,
                     right: 0,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                        vertical: 2.0,
+                        vertical: 4.0,
                         horizontal: 8.0,
                       ),
                       color: Colors.black.withOpacity(0.6),
-                      child: Text(
-                        game.name,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      child: Row(
+                        children: [
+                          // ゲームアイコン（小さめのCircleAvatar）
+                          CircleAvatar(
+                            radius: 8,
+                            backgroundColor: Colors.white,
+                            backgroundImage: game.imageUrl.isNotEmpty
+                                ? NetworkImage(game.imageUrl)
+                                : null,
+                            child: game.imageUrl.isEmpty
+                                ? Text(
+                                    game.name.isNotEmpty ? game.name[0] : '?',
+                                    style: TextStyle(
+                                      fontSize: 8,
+                                      color: Colors.black,
+                                    ),
+                                  )
+                                : null,
+                          ),
+                          SizedBox(width: 4),
+                          // ゲーム名
+                          Expanded(
+                            child: Text(
+                              game.name,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 8,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),

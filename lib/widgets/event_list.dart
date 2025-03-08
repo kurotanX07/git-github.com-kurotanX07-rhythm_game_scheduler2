@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:rhythm_game_scheduler/models/event.dart';
 import 'package:rhythm_game_scheduler/providers/event_provider.dart';
+import 'package:rhythm_game_scheduler/providers/game_provider.dart';
 import 'package:rhythm_game_scheduler/widgets/event_card.dart';
 
 class EventList extends StatelessWidget {
@@ -54,9 +55,40 @@ class EventList extends StatelessWidget {
       );
     }
     
+    // お気に入りモードかどうかを確認し、適切なメッセージを表示
+    final gameProvider = Provider.of<GameProvider>(context, listen: false);
     if (events.isEmpty) {
-      return const Center(
-        child: Text('イベントがありません'),
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              gameProvider.favoritesAsFilter 
+                  ? Icons.favorite_border 
+                  : Icons.event_busy,
+              size: 48, 
+              color: gameProvider.favoritesAsFilter ? Colors.red : Colors.grey,
+            ),
+            SizedBox(height: 16),
+            Text(
+              gameProvider.favoritesAsFilter
+                  ? 'お気に入りのゲームにイベントがありません'
+                  : '選択したゲームにイベントがありません',
+              style: TextStyle(fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+            if (gameProvider.favoritesAsFilter) ...[
+              SizedBox(height: 16),
+              ElevatedButton.icon(
+                icon: Icon(Icons.games),
+                label: Text('ゲーム一覧でお気に入り設定'),
+                onPressed: () {
+                  Navigator.pushNamed(context, '/games');
+                },
+              ),
+            ],
+          ],
+        ),
       );
     }
 
