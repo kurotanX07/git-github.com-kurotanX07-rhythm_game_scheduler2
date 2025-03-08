@@ -53,6 +53,21 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  // タブ切り替え時の処理
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+    
+    // タブ切り替え時にインタースティシャル広告を表示（確率で表示）
+    if (index == 1 || index == 2) { // カレンダーや設定に移動したとき
+      // 一定確率（約30%）で広告を表示
+      if (DateTime.now().millisecond % 10 < 3) {
+        _adService.showInterstitialAd();
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final eventProvider = Provider.of<EventProvider>(context);
@@ -246,3 +261,8 @@ class _HomeScreenState extends State<HomeScreen> {
             indent: 8,
             endIndent: 8,
           ),
+        ],
+      ),
+    );
+  }
+}

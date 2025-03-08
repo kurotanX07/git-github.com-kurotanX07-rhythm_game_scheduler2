@@ -15,7 +15,7 @@ class EventProvider with ChangeNotifier {
   bool _isFeaturedLoading = false;
 
   EventProvider() {
-    // 初期化時にFirestoreからデータを読み込んでおく
+    // 初期化時にFirestoreからデータを読み込む
     fetchEvents();
     
     // フィーチャーイベントも取得
@@ -40,7 +40,7 @@ class EventProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // Firestoreからイベントデータを取得する（改良版）
+  // Firestoreからイベントデータを取得する（サンプルデータを使わないバージョン）
   Future<void> fetchEvents() async {
     _isLoading = true;
     _error = null;
@@ -49,14 +49,8 @@ class EventProvider with ChangeNotifier {
     try {
       final events = await _firestoreService.getEvents();
       
-      if (events.isNotEmpty) {
-        _events = events;
-        debugPrint('Loaded ${events.length} events from Firestore');
-      } else {
-        debugPrint('No events in Firestore, loading sample data');
-        // Firestoreにデータがなければサンプルデータを読み込む
-        loadSampleEvents();
-      }
+      _events = events; // 空の場合も含めてFirestoreのデータを使用
+      debugPrint('Loaded ${events.length} events from Firestore');
       
       _isLoading = false;
       notifyListeners();
@@ -64,8 +58,8 @@ class EventProvider with ChangeNotifier {
       debugPrint('Error fetching Firestore events: $e');
       _error = 'データの取得に失敗しました';
       
-      // エラー時もサンプルデータを読み込む
-      loadSampleEvents();
+      // エラー時は空のリストをセット（サンプルデータを使わない）
+      _events = [];
       
       _isLoading = false;
       notifyListeners();
@@ -83,6 +77,7 @@ class EventProvider with ChangeNotifier {
       debugPrint('Loaded ${events.length} featured events');
     } catch (e) {
       debugPrint('Error fetching featured events: $e');
+      _featuredEvents = []; // エラー時は空リスト
     } finally {
       _isFeaturedLoading = false;
       notifyListeners();
@@ -97,66 +92,6 @@ class EventProvider with ChangeNotifier {
       debugPrint('Error fetching events for game $gameId: $e');
       return [];
     }
-  }
-
-  // ローカルのサンプルデータを読み込む（既存メソッド）
-  void loadSampleEvents() {
-    final now = DateTime.now();
-    
-    _events = [
-      Event(
-        id: '1',
-        gameId: 'proseka',
-        title: 'Next Frontier!イベント',
-        description: 'ランキング形式のイベントです。「Next Frontier!」をテーマにしたカードが手に入ります。',
-        startDate: now.subtract(const Duration(days: 2)),
-        endDate: now.add(const Duration(days: 5)),
-        type: EventType.ranking,
-        imageUrl: 'https://via.placeholder.com/120x80',
-      ),
-      Event(
-        id: '2',
-        gameId: 'bandori',
-        title: 'ロゼリア 新曲発表会イベント',
-        description: 'ロゼリアの新曲「PASSION」をフィーチャーしたイベントです。',
-        startDate: now.add(const Duration(days: 3)),
-        endDate: now.add(const Duration(days: 10)),
-        type: EventType.ranking,
-        imageUrl: 'https://via.placeholder.com/120x80',
-      ),
-      Event(
-        id: '3',
-        gameId: 'yumeste',
-        title: '夏休み特別キャンペーン',
-        description: '期間限定で夏をテーマにしたカードがピックアップされたガチャが登場します。',
-        startDate: now.add(const Duration(days: 1)),
-        endDate: now.add(const Duration(days: 14)),
-        type: EventType.gacha,
-        imageUrl: 'https://via.placeholder.com/120x80',
-      ),
-      Event(
-        id: '4',
-        gameId: 'deresute',
-        title: 'LIVE Parade イベント',
-        description: 'アイドルの総力戦イベント。チームを編成して上位報酬を目指しましょう。',
-        startDate: now.subtract(const Duration(days: 3)),
-        endDate: now.add(const Duration(days: 3)),
-        type: EventType.ranking,
-        imageUrl: 'https://via.placeholder.com/120x80',
-      ),
-      Event(
-        id: '5',
-        gameId: 'mirishita',
-        title: '765プロ THANKS フェスティバル',
-        description: '765プロダクション全体のライブフェスティバル。レアカードをゲットするチャンス！',
-        startDate: now.add(const Duration(days: 7)),
-        endDate: now.add(const Duration(days: 14)),
-        type: EventType.live,
-        imageUrl: 'https://via.placeholder.com/120x80',
-      ),
-    ];
-    
-    notifyListeners();
   }
 
   // 検索関連の変数

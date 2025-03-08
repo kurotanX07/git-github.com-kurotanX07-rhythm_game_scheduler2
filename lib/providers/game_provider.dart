@@ -19,7 +19,7 @@ class GameProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  // Firestoreからゲーム情報を取得
+  // Firestoreからゲーム情報を取得（サンプルデータを使わないバージョン）
   Future<void> fetchGames() async {
     _isLoading = true;
     _error = null;
@@ -28,14 +28,8 @@ class GameProvider with ChangeNotifier {
     try {
       final games = await _firestoreService.getGames();
       
-      if (games.isNotEmpty) {
-        _games = games;
-        debugPrint('Loaded ${games.length} games from Firestore');
-      } else {
-        debugPrint('No games in Firestore, loading sample data');
-        // Firestoreにデータがなければサンプルデータを読み込む
-        loadSampleGames();
-      }
+      _games = games; // 空の場合も含めてFirestoreのデータをそのまま使用
+      debugPrint('Loaded ${games.length} games from Firestore');
       
       _isLoading = false;
       notifyListeners();
@@ -43,50 +37,12 @@ class GameProvider with ChangeNotifier {
       debugPrint('Error fetching Firestore games: $e');
       _error = 'ゲーム情報の取得に失敗しました';
       
-      // エラー時もサンプルデータを読み込む
-      loadSampleGames();
+      // エラー時は空のリストをセット（サンプルデータを使わない）
+      _games = [];
       
       _isLoading = false;
       notifyListeners();
     }
-  }
-
-  // サンプルゲームデータの読み込み
-  void loadSampleGames() {
-    _games = [
-      Game(
-        id: 'proseka',
-        name: 'プロジェクトセカイカラフルステージ',
-        imageUrl: 'https://via.placeholder.com/50',
-        developer: 'SEGA / Colorful Palette',
-      ),
-      Game(
-        id: 'bandori',
-        name: 'バンドリ！ガールズバンドパーティ！',
-        imageUrl: 'https://via.placeholder.com/50',
-        developer: 'Craft Egg / Bushiroad',
-      ),
-      Game(
-        id: 'yumeste',
-        name: 'ユメステ',
-        imageUrl: 'https://via.placeholder.com/50',
-        developer: 'Happy Elements',
-      ),
-      Game(
-        id: 'deresute',
-        name: 'アイドルマスター シンデレラガールズ スターライトステージ',
-        imageUrl: 'https://via.placeholder.com/50',
-        developer: 'Bandai Namco Entertainment / Cygames',
-      ),
-      Game(
-        id: 'mirishita',
-        name: 'アイドルマスター ミリオンライブ！ シアターデイズ',
-        imageUrl: 'https://via.placeholder.com/50',
-        developer: 'Bandai Namco Entertainment',
-      ),
-    ];
-    
-    notifyListeners();
   }
 
   void toggleGameSelection(String gameId) {

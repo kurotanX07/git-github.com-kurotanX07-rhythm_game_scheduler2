@@ -36,20 +36,20 @@ class DefaultFirebaseOptions {
 
   // Firebase ConsoleからのWeb設定
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyCcNLKRfI1fUVnQqWlTH2XtA_UguGlWM6o',
-    appId: '1:860612149078:web:44bdd5a9b3de759cdc20f7',
-    messagingSenderId: '860612149078',
-    projectId: 'rhythm-game-scheduler',
-    authDomain: 'rhythm-game-scheduler.firebaseapp.com',
-    storageBucket: 'rhythm-game-scheduler.firebasestorage.app',
+    apiKey: 'AIzaSyB4j3dsfn-4oRf8mT-rccxf4Y7h1qw9sI0',
+    appId: '1:801753812238:web:9e434bd7afe8953eb79b5f',
+    messagingSenderId: '801753812238',
+    projectId: 'rhythm-game-bot',
+    authDomain: 'rhythm-game-bot.firebaseapp.com',
+    storageBucket: 'rhythm-game-bot.firebasestorage.app',
   );
 
   // Firebase ConsoleからのAndroid設定
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyAo11Jf6Cuy536ZhibDVMZou8ca6UagwwQ',
-    appId: '1:860612149078:android:06e4de0ad6ebd184dc20f7',
-    messagingSenderId: '860612149078',
-    projectId: 'rhythm-game-scheduler',
-    storageBucket: 'rhythm-game-scheduler.firebasestorage.app',
+    apiKey: 'AIzaSyA0hsHbFPDgciYgwD7OlTAzu3BGyhuT-WM',
+    appId: '1:801753812238:android:16bafb09152f2621b79b5f',
+    messagingSenderId: '801753812238',
+    projectId: 'rhythm-game-bot',
+    storageBucket: 'rhythm-game-bot.firebasestorage.app',
   );
 }

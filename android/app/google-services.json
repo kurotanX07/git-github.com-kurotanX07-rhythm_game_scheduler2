@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "860612149078",
-    "project_id": "rhythm-game-scheduler",
-    "storage_bucket": "rhythm-game-scheduler.firebasestorage.app"
+    "project_number": "801753812238",
+    "project_id": "rhythm-game-bot",
+    "storage_bucket": "rhythm-game-bot.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:860612149078:android:06e4de0ad6ebd184dc20f7",
+        "mobilesdk_app_id": "1:801753812238:android:16bafb09152f2621b79b5f",
         "android_client_info": {
-          "package_name": "com.example.rhythm_game_scheduler"
+          "package_name": "com.kurotanx07.rhythm_game_bot"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAo11Jf6Cuy536ZhibDVMZou8ca6UagwwQ"
+          "current_key": "AIzaSyA0hsHbFPDgciYgwD7OlTAzu3BGyhuT-WM"
         }
       ],
       "services": {

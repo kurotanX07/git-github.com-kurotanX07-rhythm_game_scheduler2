@@ -1,3 +1,4 @@
+// lib/widgets/event_list.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:rhythm_game_scheduler/models/event.dart';
@@ -43,9 +44,10 @@ class EventList extends StatelessWidget {
             SizedBox(height: 16),
             ElevatedButton(
               onPressed: () {
-                eventProvider.loadSampleEvents();
+                // 再読み込みを試みる
+                eventProvider.fetchEvents();
               },
-              child: Text('ローカルデータを表示'),
+              child: Text('再試行'),
             ),
           ],
         ),
@@ -71,7 +73,7 @@ class EventList extends StatelessWidget {
 
     return RefreshIndicator(
       onRefresh: () async {
-        await Provider.of<EventProvider>(context, listen: false).fetchFirestoreEvents();
+        await Provider.of<EventProvider>(context, listen: false).fetchEvents();
       },
       child: ListView(
         padding: const EdgeInsets.all(8.0),
@@ -121,7 +123,22 @@ class EventList extends StatelessWidget {
           
           // イベントが0件の場合でもプルリフレッシュできるように余白を追加
           if (activeEvents.isEmpty && upcomingEvents.isEmpty && pastEvents.isEmpty)
-            const SizedBox(height: 200),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(height: 100),
+                const Text('登録されているイベントがありません'),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('更新'),
+                  onPressed: () {
+                    eventProvider.fetchEvents();
+                  },
+                ),
+                const SizedBox(height: 100),
+              ],
+            ),
         ],
       ),
     );
